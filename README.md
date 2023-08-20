@@ -6,17 +6,7 @@
 A collection of utilities and notebooks for analysing your finances.
 
 I found the tools available online to be black boxes that were usually not as configurable as I would have liked.
-This is what lead me to create the tools you'll find in this repository. The notebooks available are:
-
-- [Student Loan](student_loan.ipynb) can be used to estimate:
-  - If your student loan will be written off
-  - The effects of making extra repayments on your total amount repaid
-
-## Setup
-
-```bash
-pip install -r requirements.txt
-```
+This is what lead me to create the tools you'll find in this repository.
 
 ## Usage
 
@@ -26,3 +16,13 @@ You can either:
 - Open this repository directly in Google Colab <a target="_blank" href="https://colab.research.google.com/github/HMellor/personal-finance-uk">
   <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
 </a>
+
+## Available Notebooks
+
+### [Student Loan](student_loan.ipynb)
+
+![Student Loan Notebook Screenshot](student_loan.png)
+
+This notebook can be used to estimate:
+  - If your student loan will be written off
+  - The effects of making extra repayments on your total amount repaid

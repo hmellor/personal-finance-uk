@@ -9,13 +9,11 @@ from utils.tax import net_present_value
 
 plt.ioff()
 
-style = {"description_width": "20%"}
+style = {"description_width": "22%"}
 layout = widgets.Layout(width="auto")
 
 
 plan = widgets.ToggleButtons(
-    description="Repayment plan",
-    style=style,
     value=os.getenv("PLAN", "Plan 2"),
     options=["Plan 1", "Plan 2", "Plan 4", "Plan 5", "Postgraduate"],
     tooltips=[
