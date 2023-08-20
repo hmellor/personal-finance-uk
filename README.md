@@ -1,9 +1,9 @@
-# Personal Finance UK 
+# Personal Finance UK
 
 > :warning: This repository and the outputs of its utilities and notebooks are not financial advice.
 > **Make use of this repository at your own risk!**
 
-A collection of utilities and notebooks for analysing your finances. 
+A collection of utilities and notebooks for analysing your finances.
 
 I found the tools available online to be black boxes that were usually not as configurable as I would have liked.
 This is what lead me to create the tools you'll find in this repository. The notebooks available are:
