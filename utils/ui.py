@@ -2,12 +2,13 @@ import os
 from datetime import date
 
 import ipywidgets as widgets
-import matplotlib.pyplot as plt
 import pandas as pd
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 from utils.tax import net_present_value
 
-plt.ioff()
+pd.options.plotting.backend = "plotly"
 
 style = {"description_width": "22%"}
 layout = widgets.Layout(width="auto")
@@ -123,33 +124,43 @@ inputs = {
     "extra_repayments": extra_repayments,
 }
 
+controls = widgets.VBox(children=tuple(inputs.values()))
 
-def get_plot(width: int = 800):
-    px = 1 / plt.rcParams["figure.dpi"]
-    plt.rcParams["axes.grid"] = True
-    fig, axes = plt.subplots(1, 2, figsize=(width * px, width / 2 * px))
-    fig.canvas.header_visible = False
-    return fig, axes
+fig = go.FigureWidget(
+    make_subplots(
+        rows=1,
+        cols=2,
+        shared_xaxes="all",
+        horizontal_spacing=0.1,
+        # vertical_spacing=0,
+        x_title="Date",
+        y_title="Amount (£)",
+    )
+)
+fig.update_layout(
+    margin=dict(l=60, r=20, t=80, b=60),
+    legend=dict(
+        orientation="h",
+        yanchor="bottom",
+        y=1.02,
+        xanchor="center",
+        x=0.5,
+    ),
+)
+fig.update_yaxes(tickprefix="£", nticks=10, rangemode="nonnegative")
+
+app = widgets.VBox(
+    children=[
+        controls,
+        fig,
+    ],
+)
 
 
-def plot_update(
-    fig,
-    ax0,
-    ax1,
+def plot(
     data: pd.DataFrame,
     inflation_rate: float = 0.05,
 ):
-    # Remove anything that's currently on the axes
-    ax0.clear()
-    ax1.clear()
-    # Plot lines
-    data[["gross", "net", "loan"]].divide(1000).plot(ax=ax0)
-    data[["interest", "salary repayment", "extra repayment"]].plot(ax=ax1)
-    fig.supxlabel("Years")
-    ax0.set_ylabel("Income (£k)")
-    ax0.set_ylim(0)
-    ax1.set_ylabel("Payments (£)")
-    ax1.set_ylim(0)
     # Create title
     final_loan_npv = net_present_value(data["loan"], discount_rate=inflation_rate / 12)[
         -1
@@ -159,18 +170,22 @@ def plot_update(
     total_repayment_npv = net_present_value(
         annual_repayments, discount_rate=inflation_rate
     ).sum()
-    suptitle = f"Outstanding balance NPV: £{final_loan_npv:,.2f}, Repayment months: {len(data)}, Repayment NPV: £{total_repayment_npv:,.2f}"
-    plt.suptitle(suptitle)
-    plt.tight_layout()
-    fig.canvas.draw()
-    fig.canvas.flush_events()
-    return fig, ax0, ax1
+    title_text = f"Outstanding balance NPV: £{final_loan_npv:,.2f}, Repayment months: {len(data)}, Repayment NPV: £{total_repayment_npv:,.2f}"
 
-
-def plot(
-    data: pd.DataFrame,
-    inflation_rate: float = 0.05,
-    title: str = "",
-):
-    fig, (ax0, ax1) = get_plot(800)
-    return plot_update(fig, ax0, ax1, data, inflation_rate, title)
+    # Plot lines
+    lines = data.plot()
+    with fig.batch_update():
+        # Add/update data
+        if not fig.data:
+            fig.add_traces(lines.data, rows=[1, 1, 1, 1, 1, 1], cols=[1, 1, 1, 2, 2, 2])
+        else:
+            for old_data, new_data in zip(fig.data, lines.data):
+                old_data.x = new_data.x
+                old_data.y = new_data.y
+        # Update title
+        fig.update_layout(
+            title=dict(
+                text=title_text,
+                x=0.5,
+            )
+        )
