@@ -1,4 +1,4 @@
 pandas
-matplotlib
+plotly
 ipywidgets
-ipympl
+python-dotenv
