@@ -27,7 +27,7 @@ def simulate_repayment(
     interest_rate,
     salary_sacrifice: float,
     plan: str = "Plan 2",
-    extra_repayments: dict[int:float] = None,
+    extra_repayments: float | dict[int:float] = None,
 ):
     # Create empty monthly dataframe
     today = date.today()
@@ -50,9 +50,12 @@ def simulate_repayment(
 
     # Parse monthly payment dictionary
     if extra_repayments:
-        for k, v in extra_repayments.items():
-            if k < len(data.index):
-                data.loc[data.index[k], "extra repayment"] = v
+        if isinstance(extra_repayments, float):
+            data["extra repayment"] = extra_repayments
+        else:
+            for k, v in extra_repayments.items():
+                if k < len(data.index):
+                    data.loc[data.index[k], "extra repayment"] = v
 
     # Simulate monthly income, interest and repayments
     for i, current_period in enumerate(data.index[:-1]):
