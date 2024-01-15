@@ -21,8 +21,16 @@ You can either:
 
 ### [Student Loan](student_loan.ipynb)
 
-![Student Loan Notebook Screenshot](student_loan.png)
+![Student Loan Notebook Screenshot](images/student_loan.png)
 
 This notebook can be used to estimate:
   - If your student loan will be written off
   - The effects of making extra repayments on your total amount repaid
+
+### [Effective Tax Rate](effective_tax_rate.ipynb)
+
+![Effective Tax Rate Notebook Screenshot](images/effective_tax_rate.png)
+
+This notebook can be used to see:
+  - How all the tax brackets (including NI) combine to form a single percentage for different gross incomes
+  - How your automatic student loan repayments are affecting your net income
