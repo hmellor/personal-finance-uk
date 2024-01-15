@@ -71,9 +71,11 @@ def simulate_repayment(
         # Apply repayments
         if data.loc[current_period, "loan"] > 0:
             # Calculate interest accrued this month and add it to next month's loan balance
-            daily_interest_rate = interest_rate / (365 + isleap(current_period.year))
             days_in_month = monthrange(current_period.year, current_period.month)[1]
-            monthly_interest_rate = (1 + daily_interest_rate) ** days_in_month - 1
+            days_in_year = 365 + isleap(current_period.year)
+            monthly_interest_rate = (1 + interest_rate) ** (
+                days_in_month / days_in_year
+            ) - 1
             data.loc[current_period, "interest"] = (
                 data.loc[current_period, "loan"] * monthly_interest_rate
             )
