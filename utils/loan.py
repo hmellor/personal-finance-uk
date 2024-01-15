@@ -15,6 +15,19 @@ plans = {
 
 
 def student_loan_repayment(gross_income: float, plan: str):
+    """
+    Calculates the student loan repayment amount based on the provided income and repayment plan.
+
+    Parameters:
+    gross_income (float): The gross income of the student.
+    plan (str): The repayment plan of the student. It must be one of the following: "Plan 1", "Plan 2", "Plan 4", "Plan 5", "Postgraduate".
+
+    Returns:
+    float: The loan repayment amount.
+
+    Raises:
+    AssertionError: If the provided plan does not exist in the predetermined plans.
+    """
     assert plan in plans, f"`plan` must be one of: {list(plans.keys())}"
     return tax(gross_income, plans[plan]["percentage"], plans[plan]["threshold"])
 
@@ -29,6 +42,29 @@ def simulate_repayment(
     plan: str = "Plan 2",
     extra_repayments: float | dict[int:float] = None,
 ):
+    """
+    Simulates the repayment of a student loan.
+
+    Parameters:
+    initial_salary (float): The initial salary of the student.
+    salary_growth (float): The annual growth rate of the salary.
+    loan (float): The initial amount of the loan.
+    graduation_year (int): The year of graduation.
+    interest_rate: The annual interest rate of the loan.
+    salary_sacrifice (float): The proportion of the salary to be sacrificed to things such as pension contributions.
+    plan (str): The repayment plan. Default is "Plan 2".
+    extra_repayments (float | dict[int:float]): Additional repayments to be made. Can be a constant amount (float) or a dictionary mapping from month number to repayment amount.
+
+    Returns:
+    pandas.DataFrame: A dataframe containing the simulation results. The columns are:
+        - "gross": Gross monthly income.
+        - "net": Net monthly income after tax and loan repayments.
+        - "loan": Remaining loan balance.
+        - "interest": Interest accrued in the current month.
+        - "salary repayment": Repayment amount from the salary in the current month.
+        - "extra repayment": Additional repayment amount in the current month.
+    """
+
     # Create empty monthly dataframe
     today = date.today()
     repayment_end = date(graduation_year + 31, 4, 1)
