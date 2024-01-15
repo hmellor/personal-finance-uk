@@ -91,7 +91,7 @@ def create_inputs():
 
     inputs["extra_repayments"] = widgets.FloatSlider(
         description="Extra repayments (£/month)",
-        value=0,
+        value=float(os.getenv("EXTRA_REPAYMENTS", 0)),
         max=2000,
         step=10,
         readout_format=".2f",
