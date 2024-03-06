@@ -52,7 +52,7 @@ def national_insurance(gross_income: float) -> float:
     Calculates the national insurance based on the gross income.
 
     The national insurance is calculated in two brackets:
-    - Basic: 12% tax on income between 12,576.12 and 50,268.
+    - Basic: 8% tax on income between 12,576 and 50,268.
     - Reduced: 2% tax on income over 50,268.
 
     Parameters:
@@ -61,7 +61,7 @@ def national_insurance(gross_income: float) -> float:
     Returns:
     float: The calculated national insurance.
     """
-    basic = tax(gross_income, 0.12, 12_576.12, 50_268)
+    basic = tax(gross_income, 0.08, 12_576, 50_268)
     reduced = tax(gross_income, 0.02, 50_268)
     return basic + reduced
 
