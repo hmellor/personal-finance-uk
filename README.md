@@ -25,7 +25,7 @@ You can either:
 
 This notebook can be used to estimate:
   - If your student loan will be written off
-  - The effects of making extra repayments on your total amount repaid
+  - The effects of making extra repayments on interest saved
 
 ### [Effective Tax Rate](effective_tax_rate.ipynb)
 
