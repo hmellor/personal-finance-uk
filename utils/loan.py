@@ -1,11 +1,12 @@
 from calendar import isleap, monthrange
 from datetime import date
 
+import numpy as np
 import pandas as pd
 
 from utils.tax import income_tax, monthly, national_insurance, tax
 
-plans = {
+PLANS = {
     "Plan 1": {"threshold": 22_015, "percentage": 0.09},
     "Plan 2": {"threshold": 27_295, "percentage": 0.09},
     "Plan 4": {"threshold": 27_660, "percentage": 0.09},
@@ -28,8 +29,8 @@ def student_loan_repayment(gross_income: float, plan: str):
     Raises:
     AssertionError: If the provided plan does not exist in the predetermined plans.
     """
-    assert plan in plans, f"`plan` must be one of: {list(plans.keys())}"
-    return tax(gross_income, plans[plan]["percentage"], plans[plan]["threshold"])
+    assert plan in PLANS, f"`plan` must be one of: {list(PLANS.keys())}"
+    return tax(gross_income, PLANS[plan]["percentage"], PLANS[plan]["threshold"])
 
 
 def simulate_repayment(
@@ -37,11 +38,12 @@ def simulate_repayment(
     salary_growth: float,
     loan: float,
     graduation_year: int,
-    interest_rate,
+    interest_rate: float,
     salary_sacrifice: float,
     plan: str = "Plan 2",
+    instant_repayment: float = None,
     extra_repayments: float | dict[int:float] = None,
-):
+) -> pd.DataFrame:
     """
     Simulates the repayment of a student loan.
 
@@ -50,9 +52,10 @@ def simulate_repayment(
     salary_growth (float): The annual growth rate of the salary.
     loan (float): The initial amount of the loan.
     graduation_year (int): The year of graduation.
-    interest_rate: The annual interest rate of the loan.
+    interest_rate (float): The annual interest rate of the loan.
     salary_sacrifice (float): The proportion of the salary to be sacrificed to things such as pension contributions.
     plan (str): The repayment plan. Default is "Plan 2".
+    instant_repayment (float): Additional repayment to be made immediately.
     extra_repayments (float | dict[int:float]): Additional repayments to be made. Can be a constant amount (float) or a dictionary mapping from month number to repayment amount.
 
     Returns:
@@ -64,96 +67,103 @@ def simulate_repayment(
         - "salary repayment": Repayment amount from the salary in the current month.
         - "extra repayment": Additional repayment amount in the current month.
     """
+    start_date = date.today()
+    end_date = date(graduation_year + 31, 4, 1)
+    periods = pd.date_range(start=start_date, end=end_date, freq="m")
 
-    # Create empty monthly dataframe
-    today = date.today()
-    repayment_end = date(graduation_year + 31, 4, 1)
-    data = pd.DataFrame(
-        0,
-        index=pd.date_range(today, repayment_end, freq="m"),
-        columns=[
-            "gross",
-            "net",
-            "loan",
-            "interest",
-            "salary repayment",
-            "extra repayment",
-        ],
-    )
+    num_preiods = len(periods)
+    columns = [
+        "gross",
+        "net",
+        "loan",
+        "interest",
+        "salary repayment",
+        "extra repayment",
+    ]
 
-    # Populate initial values
-    data.loc[data.index[0], ["gross", "loan"]] = [initial_salary / 12, loan]
+    data = {
+        "active": np.zeros((num_preiods, len(columns))),
+        "passive": np.zeros((num_preiods, len(columns))),
+    }
 
-    # Parse monthly payment dictionary
+    for mode in data:
+        # Initial gross monthly income
+        data[mode][0, 0] = initial_salary / 12
+        # Initial loan amount
+        data[mode][0, 2] = loan
+
+    if instant_repayment:
+        data["active"][0, 2] -= min(instant_repayment, loan)
+
     if extra_repayments:
         if isinstance(extra_repayments, float):
-            data["extra repayment"] = extra_repayments
+            data["active"][:, 5] = extra_repayments
         else:
             for k, v in extra_repayments.items():
-                if k < len(data.index):
-                    data.loc[data.index[k], "extra repayment"] = v
+                if k < num_preiods:
+                    data["active"][k, 5] = v
 
-    # Simulate monthly income, interest and repayments
-    for i, current_period in enumerate(data.index[:-1]):
-        # Adjust gross by salary sacrifice
-        gross = data.loc[current_period, "gross"] * (1 - salary_sacrifice)
+    def calculate_monthly_interest(current_loan, current_period):
+        days_in_month = monthrange(current_period.year, current_period.month)[1]
+        days_in_year = 365 + isleap(current_period.year)
+        monthly_interest_rate = (1 + interest_rate) ** (
+            days_in_month / days_in_year
+        ) - 1
+        return current_loan * monthly_interest_rate
 
-        # Populate next month's gross income
-        next_period = data.index[i + 1]
-        data.loc[next_period, "gross"] = data.gross.iloc[i]
-        if current_period.month == 12:
-            data.loc[next_period, "gross"] *= 1 + salary_growth
+    for i in range(1, num_preiods):
+        current_period = periods[i - 1]
 
-        # Apply repayments
-        if data.loc[current_period, "loan"] > 0:
-            # Calculate interest accrued this month and add it to next month's loan balance
-            days_in_month = monthrange(current_period.year, current_period.month)[1]
-            days_in_year = 365 + isleap(current_period.year)
-            monthly_interest_rate = (1 + interest_rate) ** (
-                days_in_month / days_in_year
-            ) - 1
-            data.loc[current_period, "interest"] = (
-                data.loc[current_period, "loan"] * monthly_interest_rate
-            )
-            data.loc[next_period, "loan"] = (
-                data.loc[current_period, "loan"] + data.loc[current_period, "interest"]
-            )
-            # Apply salary repayment
-            data.loc[current_period, "salary repayment"] = monthly(
-                student_loan_repayment, gross, plan
-            )
-            data.loc[next_period, "loan"] -= data.loc[
-                current_period, "salary repayment"
-            ]
-            # If loan has been paid off, zero the appropriate columns
-            if data.loc[next_period, "loan"] < 0:
-                data.loc[current_period, "salary repayment"] += data.loc[
-                    next_period, "loan"
-                ]
-                data.loc[current_period:, "extra repayment"] = 0
-                data.loc[next_period, "loan"] = 0
-            if data.loc[next_period, "loan"] > 0:
-                # Apply extra repayment
-                data.loc[next_period, "loan"] -= data.loc[
-                    current_period, "extra repayment"
-                ]
-                # If loan has been paid off, zero the appropriate columns
-                if data.loc[next_period, "loan"] < 0:
-                    data.loc[current_period, "extra repayment"] += data.loc[
-                        next_period, "loan"
-                    ]
-                    data.loc[next_period:, "extra repayment"] = 0
-                    data.loc[next_period, "loan"] = 0
+        for mode in data:
+            # Gross income growth and adjustment for salary sacrifice
+            data[mode][i, 0] = data[mode][i - 1, 0]
+            if current_period.month == 12:
+                data[mode][i, 0] *= 1 + salary_growth
+            gross = data[mode][i, 0] * (1 - salary_sacrifice)
 
-        # Calculate current month's net income after tax and loan repayments
-        data.loc[current_period, "net"] = (
-            gross - monthly(income_tax, gross) - monthly(national_insurance, gross)
-        )
-        data.loc[current_period, "net"] -= data.loc[
-            current_period, ["salary repayment", "extra repayment"]
-        ].sum()
+            # Interest calculation and loan update
+            if data[mode][i - 1, 2] >= 0:
+                data[mode][i - 1, 3] = calculate_monthly_interest(
+                    data[mode][i - 1, 2], current_period
+                )
+                data[mode][i, 2] = data[mode][i - 1, 2] + data[mode][i - 1, 3]
 
-    # Crop to only include time where the loan is being paid
-    if data.loan[-1] == 0:
-        data = data[: data.loan.argmin() + 1]
-    return data
+                # Salary repayment
+                data[mode][i - 1, 4] = monthly(student_loan_repayment, gross, plan)
+                data[mode][i, 2] -= data[mode][i - 1, 4]
+
+                if data[mode][i, 2] < 0:
+                    data[mode][i - 1, 4] += data[mode][i, 2]
+                    data[mode][i - 1 :, 5] = 0
+                    data[mode][i, 2] = 0
+
+                # Extra repayment
+                if mode == "active":
+                    data[mode][i, 2] -= data[mode][i - 1, 5]
+                    if data[mode][i, 2] < 0:
+                        data[mode][i - 1, 5] += data[mode][i, 2]
+                        data[mode][i:, 5] = 0
+                        data[mode][i, 2] = 0
+
+            # Net income after tax and repayments
+            data[mode][i - 1, 1] = (
+                gross - monthly(income_tax, gross) - monthly(national_insurance, gross)
+            ) - (data[mode][i - 1, 4] + data[mode][i - 1, 5])
+
+    df_active = pd.DataFrame(data["active"], index=periods, columns=columns)
+    df_passive = pd.DataFrame(data["passive"], index=periods, columns=columns)
+
+    # Merge the passive and active data
+    df = pd.merge(
+        left=df_passive,
+        right=df_active,
+        how="outer",
+        left_index=True,
+        right_index=True,
+        suffixes=(" passive", " active"),
+    )
+
+    # Trim the dataframe to only include periods where the loan is being repaid
+    if df["loan passive"].iloc[-1] == 0:
+        df = df[: df["loan passive"].argmin() + 1]
+    return df
