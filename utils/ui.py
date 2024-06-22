@@ -80,6 +80,14 @@ class Inputs:
                 readout_format=".1%",
                 **slider_kwargs,
             ),
+            instant_repayment=widgets.FloatSlider(
+                description="Instant repayment (£)",
+                value=float(os.getenv("INSTANT_REPAYMENT", 0)),
+                max=150000,
+                step=10,
+                readout_format=".2f",
+                **slider_kwargs,
+            ),
             extra_repayments=widgets.FloatSlider(
                 description="Extra repayments (£/month)",
                 value=float(os.getenv("EXTRA_REPAYMENTS", 0)),
@@ -89,6 +97,8 @@ class Inputs:
                 **slider_kwargs,
             ),
         )
+
+        self.widgets["instant_repayment"].max = self.widgets["loan"].value
 
     def get_widgets(self, widgets: list[str]) -> dict[str, Widget]:
         return {k: v for k, v in self.widgets.items() if k in widgets}
@@ -131,14 +141,7 @@ class InteractiveFigure:
             y_title=y_title,
         )
         self.figure.update_layout(
-            margin=dict(l=60, r=20, t=80, b=60),
-            legend=dict(
-                orientation="h",
-                yanchor="bottom",
-                y=1.02,
-                xanchor="center",
-                x=0.5,
-            ),
+            margin=dict(l=20, r=20, t=40, b=20),
         )
 
         # Initialise the figure
