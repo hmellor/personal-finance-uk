@@ -1,25 +1,26 @@
+import numpy as np
 import pandas as pd
 
 
 def tax(
-    income: float, rate: float, lower: float = 0, upper: float = float("inf")
-) -> float:
+    income: np.ndarray, rate: float, lower: float = 0, upper: float = float("inf")
+) -> np.ndarray:
     """
     Calculates the tax based on the income, rate, lower and upper limit.
 
     Parameters:
-    income (float): The income on which the tax is to be calculated.
+    income (np.ndarray): The income on which the tax is to be calculated.
     rate (float): The tax rate.
     lower (float, optional): The lower income limit for the tax bracket. Defaults to 0.
     upper (float, optional): The upper income limit for the tax bracket. Defaults to infinity.
 
     Returns:
-    float: The calculated tax.
+    np.ndarray: The calculated tax.
     """
-    return max(0, min(upper - lower, income - lower)) * rate
+    return np.maximum(0, np.minimum(upper - lower, income - lower)) * rate
 
 
-def income_tax(gross_income: float) -> float:
+def income_tax(gross_income: np.ndarray) -> np.ndarray:
     """
     Calculates the income tax based on the gross income.
 
@@ -32,14 +33,16 @@ def income_tax(gross_income: float) -> float:
         - Additional: 45% tax on income over 125,140.
 
     Parameters:
-    gross_income (float): The gross income on which the tax is to be calculated.
+    gross_income (np.ndarray): The gross income on which the tax is to be calculated.
 
     Returns:
-    float: The calculated tax.
+    np.ndarray: The calculated tax.
     """
     personal_allowance = 12_570
-    personal_allowance_reduction = 0.5 * max(0, gross_income - 100_000)
-    personal_allowance = max(0, personal_allowance - personal_allowance_reduction)
+    personal_allowance_reduction = 0.5 * np.maximum(0, gross_income - 100_000)
+    personal_allowance = np.maximum(
+        0, personal_allowance - personal_allowance_reduction
+    )
 
     basic = tax(gross_income, 0.2, personal_allowance, 50_270)
     higher = tax(gross_income, 0.4, 50_270, 125_140)
@@ -47,7 +50,7 @@ def income_tax(gross_income: float) -> float:
     return basic + higher + additional
 
 
-def national_insurance(gross_income: float) -> float:
+def national_insurance(gross_income: np.ndarray) -> np.ndarray:
     """
     Calculates the national insurance based on the gross income.
 
@@ -56,17 +59,19 @@ def national_insurance(gross_income: float) -> float:
     - Reduced: 2% tax on income over 50,268.
 
     Parameters:
-    gross_income (float): The gross income on which the national insurance is to be calculated.
+    gross_income (np.ndarray): The gross income on which the national insurance is to be calculated.
 
     Returns:
-    float: The calculated national insurance.
+    np.ndarray: The calculated national insurance.
     """
     basic = tax(gross_income, 0.08, 12_576, 50_268)
     reduced = tax(gross_income, 0.02, 50_268)
     return basic + reduced
 
 
-def monthly(func: callable, gross_income_monthly: pd.Series, *args: list) -> pd.Series:
+def monthly(
+    func: callable, gross_income_monthly: np.ndarray, *args: list
+) -> np.ndarray:
     """
     Calculates the monthly tax based on the gross income and the given function.
 
@@ -75,34 +80,34 @@ def monthly(func: callable, gross_income_monthly: pd.Series, *args: list) -> pd.
 
     Parameters:
     func (callable): The function to be applied on the gross income.
-    gross_income_monthly (pd.Series): The gross income on a monthly basis.
+    gross_income_monthly (np.ndarray): The gross income on a monthly basis.
     *args (list): Additional arguments to be passed to the function.
 
     Returns:
-    pd.Series: The calculated monthly tax.
+    np.ndarray: The calculated monthly tax.
     """
     return func(gross_income_monthly * 12, *args) / 12
 
 
-def net_present_value(cash_flow: pd.Series, discount_rate: float = 0.05) -> pd.Series:
+def net_present_value(cash_flow: np.ndarray, discount_rate: float = 0.05) -> np.ndarray:
     """
-    Calculates the net present value of a cash flow series.
+    Calculates the net present value of a cash flow array.
 
-    This function takes a series of cash flows and a discount rate, and returns a series of the same cash flows discounted
+    This function takes an array of cash flows and a discount rate, and returns an array of the same cash flows discounted
     to their present value. The discounting is done using the formula:
 
         present_value = future_value / (1 + discount_rate) ** number_of_periods
 
-    where number_of_periods is the index of the cash flow in the series (i.e., the year).
+    where number_of_periods is the index of the cash flow in the array (i.e., the year).
 
     Parameters:
-    cash_flow (pd.Series): The series of cash flows. The index of the series is assumed to represent the year.
+    cash_flow (np.ndarray): The array of cash flows. The index of the array is assumed to represent the year.
     discount_rate (float, optional): The discount rate to be used for discounting the cash flows. Defaults to 0.05.
 
     Returns:
-    pd.Series: The series of discounted cash flows.
+    np.ndarray: The array of discounted cash flows.
     """
-    discounted = cash_flow.copy()
-    for i, year in enumerate(discounted.index):
-        discounted[year] /= (1 + discount_rate) ** i
-    return discounted
+    periods = np.arange(len(cash_flow))
+    discount_factors = (1 + discount_rate) ** periods
+    discounted_cash_flows = cash_flow / discount_factors
+    return discounted_cash_flows
